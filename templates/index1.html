@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QR Code Scanner</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; max-width: 800px; margin: 0 auto; }
+        #video-container { max-width: 100%; margin: 20px auto; }
+        #video-feed { max-width: 100%; }
+        #result { margin: 20px; font-weight: bold; }
+        .button-container { margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>QR Code Scanner</h1>
+    
+    <div class="button-container">
+        <button onclick="startScan()">Start Scanning</button>
+        <button onclick="stopScan()">Stop Scanning</button>
+    </div>
+
+    <div id="video-container">
+        <img id="video-feed" src="{{ url_for('video_feed') }}" alt="Camera Feed">
+    </div>
+
+    <div id="result"></div>
+
+    <h2>Or Upload an Image</h2>
+    <input type="file" id="file-upload" accept=".png,.jpg,.jpeg">
+    <button onclick="uploadImage()">Upload QR Code</button>
+
+    <script>
+        function startScan() {
+            fetch('/start_scan', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data.message);
+                    checkScanResult();
+                });
+        }
+
+        function stopScan() {
+            fetch('/stop_scan', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data.message);
+                    document.getElementById('result').innerText = '';
+                });
+        }
+
+        function checkScanResult() {
+            fetch('/scan_result')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.found) {
+                        document.getElementById('result').innerText = 
+                            `Scanned: ${data.result}`;
+                    } else {
+                        // If not found, check again after a delay
+                        setTimeout(checkScanResult, 1000);
+                    }
+                });
+        }
+
+        function uploadImage() {
+            const fileInput = document.getElementById('file-upload');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('qr_image', file);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').innerText = data.result;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('result').innerText = 'Upload failed';
+            });
+        }
+    </script>
+</body>
+</html>
